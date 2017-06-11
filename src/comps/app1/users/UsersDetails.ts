@@ -131,7 +131,7 @@ export class UsersDetails {
     }
 
     getBusinessIdSelected(): number {
-        if (!this.m_businesses)
+        if (!this.m_businesses || this.m_businesses.size == 0)
             return -1;
         return this.m_businesses.first().getBusinessId()
     }
