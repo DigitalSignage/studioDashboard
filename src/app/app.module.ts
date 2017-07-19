@@ -121,6 +121,7 @@ import {Ng2Highmaps} from "../comps/ng2-highcharts/src/directives/ng2-highmaps";
 import {Ng2Highstocks} from "../comps/ng2-highcharts/src/directives/ng2-highstocks";
 import {StringJSV2Pipe} from "../pipes/stringjsv2.pipe";
 import {Lib} from "../Lib";
+import {NgControlOptionsDirective} from "../comps/ngcontroloptions/NgControlOptionsDirective";
 
 export enum ServerMode {
     CLOUD,
@@ -208,7 +209,7 @@ export var providing = [CommBroker, AUTH_PROVIDERS, BsDropdownConfig, NgmslibSer
 var decelerations = [AppComponent, RatesTable, UsersDetails, AutoLogin, LoginPanel, Account, Whitelabel, Apps, App1, Users, Adnet, Privileges, Dashboard, Logout, Orders, Logo,
     LogoCompany, Footer, BlurForwarder, InputEdit, OrderBy, SortBy, FilterPipe, FilterPipeEqual, StringJSV2Pipe, AdnetBilling, AdnetConfigTargets, AdnetConfigRates, Tabs, Tab, ServerStats, ServerAvg,
     StationsMap, StationsGrid, StationDetails, ImgLoader, Ng2Highcharts, Ng2Highmaps, Ng2Highstocks, AdnetConfigCustomer, AdnetConfig, StationSnapshot, OrderDetails, simplelist, PrivilegesDetails, ModalDialog, Infobox,
-    UserStorage, Loading, Samplelist, UserInfo, AddUser, AdnetPayment, AdnetTransfer, ChangePass, simplelistEditable, AdnetConfigTargetStations,
+    UserStorage, Loading, Samplelist, UserInfo, AddUser, AdnetPayment, AdnetTransfer, ChangePass, simplelistEditable, AdnetConfigTargetStations, NgControlOptionsDirective,
     AdnetConfigTargetProps, AdnetLocation, MapAddress, AdnetNetwork, AdnetNetworkCustomerSelector, AdnetNetworkPackageEditor, AdnetNetworkPackageViewer, AdnetNetworkTargetSearch,
     AdnetNetworkPackageProps, AdnetNetworkPackageContent, AdnetNetworkPackageContentProps, AdnetNetworkTarget, AdnetNetworkTargetProps, ResourceViewer, AdnetNetworkPackageViewProps,
     AdnetNetworkPairProps, AdnetLoader, InputNumeric, InputString, Dropbox, Twofactor, AdnetReports, ThrottlePipe, NgMenu, NgMenuItem];
