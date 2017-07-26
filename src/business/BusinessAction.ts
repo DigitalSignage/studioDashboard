@@ -51,32 +51,63 @@ export class BusinessAction extends Actions {
                 return v;
             })
             .debounceTime(100)
-            .switchMap((values: {businessIds: Array<string>, dispatch: (value: any) => any}): any => {
+            .switchMap((values: { businessIds: Array<string>, dispatch: (value: any) => any }): any => {
                 if (values.businessIds.length == 0)
                     return 'CANCEL_PENDING_NET_CALLS';
-                var businessIds: string = values.businessIds.join('.');
                 var dispatch = values.dispatch;
-                var appdb: Map<string,any> = this.appStore.getState().appdb;
-                var url = appdb.get('appBaseUrlUser') + `&command=GetBusinessUsers&businessList=${businessIds}`;
-                return this._http.get(url)
-                    .map(result => {
-                        var xmlData: string = result.text()
-                        // xmlData = xmlData.replace(/}\)/, '').replace(/\(\{"result":"/, '');
-                        this.parseString(xmlData, {attrkey: '_attr'}, function (err, result) {
+                function chunkArrayInGroups(arr, size) {
+                    var result = [];
+                    for (var i = 0; i < arr.length; i += size)
+                        result.push(arr.slice(i, i + size));
+                    return result;
+                }
+
+                var businessesArray = chunkArrayInGroups(values.businessIds, 100);
+                var observables: Array<Observable<any>> = [];
+                for (let member in businessesArray) {
+                    var i_businesses = businessesArray[member];
+                    var businessIds = i_businesses.join('.');
+                    var appdb: Map<string, any> = this.appStore.getState().appdb;
+                    var url = appdb.get('appBaseUrlUser') + `&command=GetBusinessUsers&businessList=${businessIds}`;
+                    observables.push(
+                        this._http.get(url)
+                            .map(result => {
+                                var businessUsers: List<BusinessUser> = List<BusinessUser>();
+                                var xmlData: string = result.text()
+                                // xmlData = xmlData.replace(/}\)/, '').replace(/\(\{"result":"/, '');
+                                this.parseString(xmlData, {attrkey: '_attr'}, function (err, result) {
+                                    for (var business of result.Users.User) {
+                                        const businessUser: BusinessUser = new BusinessUser({
+                                            accessMask: business._attr.accessMask,
+                                            privilegeId: business._attr.privilegeId,
+                                            password: '',
+                                            name: business._attr.name,
+                                            businessId: business._attr.businessId,
+                                        });
+                                        businessUsers = businessUsers.push(businessUser)
+                                    }
+                                })
+                                return businessUsers;
+                            })
+                    )
+                }
+                Observable.forkJoin(observables)
+                    .subscribe(
+                        (data: Array<any>) => {
                             var businessUsers: List<BusinessUser> = List<BusinessUser>();
-                            for (var business of result.Users.User) {
-                                const businessUser: BusinessUser = new BusinessUser({
-                                    accessMask: business._attr.accessMask,
-                                    privilegeId: business._attr.privilegeId,
-                                    password: '',
-                                    name: business._attr.name,
-                                    businessId: business._attr.businessId,
-                                });
-                                businessUsers = businessUsers.push(businessUser)
-                            }
+                            data.forEach((i_data: List<any>) => {
+                                i_data.forEach((d) => {
+                                    businessUsers = businessUsers.push(d);
+                                })
+                            })
                             dispatch(self.receiveBusinessUsers(businessUsers));
-                        });
-                    });
+                        },
+                        (err: Response) => {
+                            console.log('problem loading business users ' + err);
+                        },
+                        () => {
+                        }
+                    );
             }).publish().connect()
         // }).share().subscribe()
 
@@ -89,15 +120,15 @@ export class BusinessAction extends Actions {
         };
     }
 
-    public findBusinessIndex(business: BusinessModel|BusinessUser, businesses: List<BusinessModel|BusinessUser>): number {
-        var res = businesses.findIndex((i_business: BusinessModel|BusinessUser) => {
+    public findBusinessIndex(business: BusinessModel | BusinessUser, businesses: List<BusinessModel | BusinessUser>): number {
+        var res = businesses.findIndex((i_business: BusinessModel | BusinessUser) => {
             return i_business.getBusinessId() === business.getBusinessId();
         });
         return Lib.CheckFoundIndex(res);
     }
 
-    public findBusinessIndexById(businessId: string, businesses: List<BusinessModel|BusinessUser>): number {
-        var res = businesses.findIndex((i_business: BusinessModel|BusinessUser) => {
+    public findBusinessIndexById(businessId: string, businesses: List<BusinessModel | BusinessUser>): number {
+        var res = businesses.findIndex((i_business: BusinessModel | BusinessUser) => {
             return businessId === i_business.getBusinessId();
         });
         return Lib.CheckFoundIndex(res);
@@ -106,7 +137,7 @@ export class BusinessAction extends Actions {
     public getSamples() {
         var self = this;
         return (dispatch) => {
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
 
             // todo: Enable this later when we move sample list to a web service, for now we do it via static content
             // this._http.get('http://galaxy.signage.me/WebService/getResellerTemplates.ashx?resellerId=1&ver=2')
@@ -138,7 +169,7 @@ export class BusinessAction extends Actions {
     public updateAccount(businessId: string, name: string, maxMonitors: number, allowSharing: string) {
         return (dispatch) => {
             dispatch(this.saveAccountInfo({businessId, name, maxMonitors, allowSharing}));
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
             var url;
             url = appdb.get('appBaseUrlUser') + `&command=UpdateAccount&buinessId=${businessId}&businessName=${name}&maxMonitors=${maxMonitors}&allowSharing=${allowSharing}`;
             this._http.get(url)
@@ -159,7 +190,7 @@ export class BusinessAction extends Actions {
     }
 
     public getStudioProUrl(customerUserName: string, cb: (url: string) => void) {
-        var appdb: Map<string,any> = this.appStore.getState().appdb;
+        var appdb: Map<string, any> = this.appStore.getState().appdb;
         var url;
         url = appdb.get('appBaseUrlUser') + `&command=GetLoginUrl&customerUserName=${customerUserName}`;
         this._http.get(url)
@@ -176,7 +207,7 @@ export class BusinessAction extends Actions {
     }
 
     public getUserPass(customerUserName: string, cb: (url: string) => void) {
-        var appdb: Map<string,any> = this.appStore.getState().appdb;
+        var appdb: Map<string, any> = this.appStore.getState().appdb;
         var url;
         url = appdb.get('appBaseUrlUser') + `&command=GetUserPass&customerUserName=${customerUserName}`;
         // console.log(url);
@@ -195,7 +226,7 @@ export class BusinessAction extends Actions {
 
     public removeBusiness(businessId: number) {
         return (dispatch) => {
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
             var url;
             url = appdb.get('appBaseUrlUser') + `&command=DeleteAccount&buinessId=${businessId}`;
             this._http.get(url)
@@ -235,7 +266,7 @@ export class BusinessAction extends Actions {
             }
             var businessServerSources: BusinessSourcesModel = new BusinessSourcesModel({});
 
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
             var url = appdb.get('appBaseUrlUser') + '&command=GetCustomers';
             this._http.get(url)
                 .map(result => {
@@ -328,7 +359,7 @@ export class BusinessAction extends Actions {
 
     public updateBusinessUserAccess(businessId: string, name: any, accessMask: number, privilegeId: number) {
         return (dispatch) => {
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
             var url = appdb.get('appBaseUrlUser') + `&command=UpdateUserPrivilege&privilegeId=${privilegeId}&accessMask=${accessMask}&customerUserName=${name}`;
             this._http.get(url)
                 .map(result => {
@@ -347,7 +378,7 @@ export class BusinessAction extends Actions {
     // import existing account from MediaSignage
     public associateUser(user: string, pass: string) {
         return (dispatch) => {
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
             var url;
             url = appdb.get('appBaseUrlUser') + `&command=AssociateAccount&customerUserName=${user}&customerPassword=${pass}`;
             this._http.get(url)
@@ -379,7 +410,7 @@ export class BusinessAction extends Actions {
         let accessMask = businessUser.getAccessMask();
         let privilegeId = businessUser.privilegeId();
         return (dispatch) => {
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
             var url;
             url = appdb.get('appBaseUrlUser') + `&command=DuplicateAccount&customerBusinessName=${businessName}&customerUserName=${name}&customerPassword=${password}&templateBusinessId=${businessId}&privilegeId=${privilegeId}&accessMask=${accessMask}`;
             this._http.get(url)
@@ -404,7 +435,7 @@ export class BusinessAction extends Actions {
     // new user under an account
     public addNewBusinessUser(businessUser: BusinessUser) {
         return (dispatch) => {
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
             let businessId = businessUser.getBusinessId();
             let name = businessUser.getName();
             let password = businessUser.getPassword();
@@ -425,7 +456,7 @@ export class BusinessAction extends Actions {
 
     public updateBusinessPassword(userName: string, newPassword: string) {
         return (dispatch) => {
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
             var url = appdb.get('appBaseUrlUser') + `&command=ChangePassword&userName=${userName}&newPassword=${newPassword}`;
             this._http.get(url)
                 .map(result => {
@@ -446,7 +477,7 @@ export class BusinessAction extends Actions {
 
     public removeBusinessUser(businessUser: BusinessUser) {
         return (dispatch) => {
-            var appdb: Map<string,any> = this.appStore.getState().appdb;
+            var appdb: Map<string, any> = this.appStore.getState().appdb;
             var url = appdb.get('appBaseUrlUser') + `&command=RemoveBusinessUser&customerUserName=${businessUser.getName()}`
             this._http.get(url)
                 .map(result => {

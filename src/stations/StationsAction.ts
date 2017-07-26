@@ -45,7 +45,7 @@ export class StationsAction extends Actions {
         var stationIndex = stations.findIndex((stationModel: StationModel) => {
             return stationModel.getKey('businessId') === i_businessId && stationModel.getKey('id') == i_stationId;
         });
-        Lib.CheckFoundIndex(stationIndex);
+        // Lib.CheckFoundIndex(stationIndex);
         var station: StationModel = stations.get(stationIndex);
         return station.getLocation();
     }
@@ -53,93 +53,119 @@ export class StationsAction extends Actions {
     public getStationsInfo(config) {
         var self = this;
         return (dispatch) => {
+            function chunkArrayInGroups(arr, size) {
+                var result = [];
+                for (var i = 0; i < arr.length; i += size)
+                    result.push(arr.slice(i, i + size));
+                return result;
+            }
+
             var totalStations = 0;
             var observables: Array<Observable<any>> = [];
             for (let i_source in config) {
                 var i_businesses = config[i_source];
-                var businesses = i_businesses.join(',');
-                var url: string = `https://${i_source}/WebService/StationService.asmx/getSocketStatusList?i_businessList=${businesses}`;
-                // console.log('http: ' + url);
-                observables.push(this._http.get(url).retry(2) .catch((err) => {
-                    console.log('problem loading station ' + err);
-                    return Observable.throw(err);
-                }).finally(() => {
-                    console.log('done loading http');
-                }).map((res) => {
-                    return {xml: res.text(), source: i_source};
-                }));
-            }
-            Observable.forkJoin(observables).subscribe(
-                (data: Array<any>) => {
-                    data.forEach((i_data) => {
-                        var source = i_data.source;
-                        var xmlData: string = i_data.xml;
-                        xmlData = xmlData.replace(/&lt;/ig, '<').replace(/&gt;/ig, '>');
-                        this.m_parseString(xmlData, {attrkey: '_attr'}, (err, result) => {
-                            if (err) {
-                                return this.toastr.error('problem loading station info');
-                            }
-                            /**
-                             * redux inject stations sources
-                             **/
-                            var stations: List<StationModel> = List<StationModel>();
-                            if (result.string.SocketStatus["0"].Business) {
-                                result.string.SocketStatus["0"].Business.forEach((business) => {
-                                    var businessId = business._attr.businessId;
-                                    if (business.Stations["0"].Station) {
-                                        business.Stations["0"].Station.forEach((station) => {
-                                            var stationId = station._attr.id;
-                                            var geoLocation = self.getStationGeoLocation(source, businessId, stationId)
-                                            var stationData = {
-                                                businessId: businessId,
-                                                id: stationId,
-                                                geoLocation: geoLocation,
-                                                source: source,
-                                                airVersion: station._attr.airVersion,
-                                                appVersion: station._attr.appVersion,
-                                                caching: station._attr.caching,
-                                                localIp: station._attr.localAddress,
-                                                publicIp: station._attr.publicIp,
-                                                cameraStatus: station._attr.cameraStatus,
-                                                connection: station._attr.connection,
-                                                lastCameraTest: station._attr.lastCameraTest,
-                                                lastUpdate: station._attr.lastUpdate,
-                                                name: station._attr.name,
-                                                os: station._attr.os,
-                                                peakMemory: station._attr.peakMemory,
-                                                runningTime: station._attr.runningTime,
-                                                socket: station._attr.socket,
-                                                startTime: station._attr.startTime,
-                                                status: station._attr.status,
-                                                totalMemory: station._attr.totalMemory,
-                                                watchDogConnection: station._attr.watchDogConnection
-                                            };
-                                            var stationModel: StationModel = new StationModel(stationData)
-                                            stations = stations.push(stationModel);
-                                        })
-                                    }
-                                })
-                            }
-                            totalStations = totalStations + stations.size;
-                            dispatch(self.receiveStations(stations, source));
-                        });
-                    })
-                },
-                (err: Response) => {
-                    err = err.json();
-                    var status = err['currentTarget'].status;
-                    var statusText = err['currentTarget'].statusText;
-                    this.commBroker.fire({
-                        fromInstance: this,
-                        event: Consts.Events().STATIONS_NETWORK_ERROR,
-                        context: this,
-                        message: ''
-                    });
-                },
-                () => {
-                    dispatch(self.receiveTotalStations(totalStations));
+                var a = chunkArrayInGroups(i_businesses, 100)
+                for (var v in a) {
+                    var t = a[v];
+                    var businesses = t.join(',');
+                    var url: string = `https://${i_source}/WebService/StationService.asmx/getSocketStatusList?i_businessList=${businesses}`;
+                    observables.push(this._http.get(url).retry(2).catch((err) => {
+                        console.log('problem loading station ' + err);
+                        return Observable.throw(err);
+                    }).finally(() => {
+                        console.log('done loading http');
+                    }).map((res) => {
+                        return {xml: res.text(), source: i_source};
+                    }));
                 }
-            );
+
+            }
+
+            // for (let i_source in config) {
+            //     var i_businesses = config[i_source];
+            //     var businesses = i_businesses.join(',');
+            //     var url: string = `https://${i_source}/WebService/StationService.asmx/getSocketStatusList?i_businessList=${businesses}`;
+            //     observables.push(this._http.get(url).retry(2).catch((err) => {
+            //         console.log('problem loading station ' + err);
+            //         return Observable.throw(err);
+            //     }).finally(() => {
+            //         console.log('done loading http');
+            //     }).map((res) => {
+            //         return {xml: res.text(), source: i_source};
+            //     }));
+            // }
+            Observable.forkJoin(observables)
+                .subscribe(
+                    (data: Array<any>) => {
+                        data.forEach((i_data) => {
+                            var source = i_data.source;
+                            var xmlData: string = i_data.xml;
+                            xmlData = xmlData.replace(/&lt;/ig, '<').replace(/&gt;/ig, '>');
+                            this.m_parseString(xmlData, {attrkey: '_attr'}, (err, result) => {
+                                if (err) {
+                                    return this.toastr.error('problem loading station info');
+                                }
+                                /**
+                                 * redux inject stations sources
+                                 **/
+                                var stations: List<StationModel> = List<StationModel>();
+                                if (result.string.SocketStatus["0"].Business) {
+                                    result.string.SocketStatus["0"].Business.forEach((business) => {
+                                        var businessId = business._attr.businessId;
+                                        if (business.Stations["0"].Station) {
+                                            business.Stations["0"].Station.forEach((station) => {
+                                                var stationId = station._attr.id;
+                                                var geoLocation = self.getStationGeoLocation(source, businessId, stationId)
+                                                var stationData = {
+                                                    businessId: businessId,
+                                                    id: stationId,
+                                                    geoLocation: geoLocation,
+                                                    source: source,
+                                                    airVersion: station._attr.airVersion,
+                                                    appVersion: station._attr.appVersion,
+                                                    caching: station._attr.caching,
+                                                    localIp: station._attr.localAddress,
+                                                    publicIp: station._attr.publicIp,
+                                                    cameraStatus: station._attr.cameraStatus,
+                                                    connection: station._attr.connection,
+                                                    lastCameraTest: station._attr.lastCameraTest,
+                                                    lastUpdate: station._attr.lastUpdate,
+                                                    name: station._attr.name,
+                                                    os: station._attr.os,
+                                                    peakMemory: station._attr.peakMemory,
+                                                    runningTime: station._attr.runningTime,
+                                                    socket: station._attr.socket,
+                                                    startTime: station._attr.startTime,
+                                                    status: station._attr.status,
+                                                    totalMemory: station._attr.totalMemory,
+                                                    watchDogConnection: station._attr.watchDogConnection
+                                                };
+                                                var stationModel: StationModel = new StationModel(stationData)
+                                                stations = stations.push(stationModel);
+                                            })
+                                        }
+                                    })
+                                }
+                                totalStations = totalStations + stations.size;
+                                dispatch(self.receiveStations(stations, source));
+                            });
+                        })
+                    },
+                    (err: Response) => {
+                        err = err.json();
+                        var status = err['currentTarget'].status;
+                        var statusText = err['currentTarget'].statusText;
+                        this.commBroker.fire({
+                            fromInstance: this,
+                            event: Consts.Events().STATIONS_NETWORK_ERROR,
+                            context: this,
+                            message: ''
+                        });
+                    },
+                    () => {
+                        dispatch(self.receiveTotalStations(totalStations));
+                    }
+                );
         }
     }
 
