@@ -103,6 +103,28 @@ export class Account {
         this.renderFormInputs();
     }
 
+    // payments = [{
+    //     index: 1,
+    //     icon: 'fa-credit-card-alt',
+    //     name: 'credit card'
+    // }, {
+    //     index: 2,
+    //     icon: 'fa-cc-paypal',
+    //     name: 'paypal'
+    // }, {
+    //     index: 0,
+    //     icon: 'fa-times-circle',
+    //     name: 'disable'
+    // }, {
+    //     index: 4,
+    //     icon: 'fa-plus',
+    //     name: 'suspend'
+    // },{
+    //     index: 3,
+    //     icon: 'fa-plus',
+    //     name: 'annual'
+    // }]
+
     payments = [{
         index: 1,
         icon: 'fa-credit-card-alt',
@@ -110,11 +132,19 @@ export class Account {
     }, {
         index: 2,
         icon: 'fa-cc-paypal',
-        name: 'paypal'
+        name: 'paypal (discontinued)'
     }, {
         index: 0,
         icon: 'fa-times-circle',
         name: 'disable'
+    }, {
+        index: 4,
+        icon: 'fa-plus',
+        name: 'suspend'
+    },{
+        index: 3,
+        icon: 'fa-plus',
+        name: 'annual'
     }]
 
     cards = ['visa', 'mastercard', 'amex', 'discover', 'paypal'];
