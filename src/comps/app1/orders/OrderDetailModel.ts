@@ -120,6 +120,10 @@ export class OrderDetailModel extends StoreModel {
         return this.getKey('orderDetails')[0].tracking;
     }
 
+    public getSubscriptionPayment() {
+        return this.getKey('subscription').amount;
+    }
+
     public getDate() {
         var subscription = this.getKey('subscription')
         if (subscription)

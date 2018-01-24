@@ -53,22 +53,29 @@ export class OrderDetails extends Compbaser {
         if (!order)
             return;
         this.selectedOrder = order;
+
         if (this.selectedOrder.getStatus() == 'subscription') {
+            this.subsInvoice = false;
             this.products = [{
                 description: "Enterprise subscription",
                 product_count: 1,
-                price: "99.00"
+                price: this.selectedOrder.getSubscriptionPayment()
             }];
-            this.subtotal = 99;
-            this.total = 99;
+
+            // price: order._data._root.entries["3"]["1"].amount
+
+            this.subtotal = this.selectedOrder.getSubscriptionPayment();
+            this.total = this.selectedOrder.getSubscriptionPayment();
             this.shipping = 0;
             this.discount = 0;
             this.tax = 0;
         } else {
+            this.subsInvoice = true;
             this.products = this.selectedOrder.getOrderDetails();
         }
     };
 
+    subsInvoice = false;
     subtotal: number = 0;
     tax: number = 0;
     discount: number = 0;
