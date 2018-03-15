@@ -114,7 +114,8 @@ export class UsersDetails {
         var re: any = new RegExp(pattern);
         var server: any = origin.match(re)[3];
         if (server.match(/gsignage.com/i) || server.match(/signage.me/i) || server.match(/localhost/i) || server.match(/digitalsignage.com/i))
-            return 'https://secure.digitalsignage.com/_studiolite-dist/studiolite.html';
+            return 'https://secure.digitalsignage.com/studioweb/UserLogin';
+            // return 'https://secure.digitalsignage.com/_studiolite-dist/studiolite.html';
         return `${origin}/_studiolite-dist/studiolite.html`;
     }
 
